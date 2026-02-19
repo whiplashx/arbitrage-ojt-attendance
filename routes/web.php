@@ -42,6 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/attendance/time-out', [AttendanceController::class, 'timeOut']);
     Route::get('/api/attendance/today', [AttendanceController::class, 'getTodayAttendance']);
     Route::get('/api/attendance/monthly', [AttendanceController::class, 'getMonthlyAttendance']);
+    Route::get('/api/attendance/history', [AttendanceController::class, 'getAttendanceHistory']);
     Route::get('/api/attendance/total-hours', [AttendanceController::class, 'getTotalHoursWorked']);
 });
 

@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { FacialRecognitionModal } from '@/components/facial-recognition-modal';
 import type { BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
-import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useToast, ToastContainer } from '@/components/ui/toast';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -50,14 +51,14 @@ export default function Dashboard() {
     const [goalHours, setGoalHours] = useState<number>(8);
     const [showGoalInput, setShowGoalInput] = useState(false);
     const [tempGoalInput, setTempGoalInput] = useState<string>('8');
-    const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-    const [monthlyAttendance, setMonthlyAttendance] = useState<Record<string, any>>({});
     const [ojtStartDate, setOjtStartDate] = useState<Date | null>(null);
     const [ojtEndDate, setOjtEndDate] = useState<Date | null>(null);
     const [totalHoursWorked, setTotalHoursWorked] = useState<number>(0);
-    const [ojtTotalHours, setOjtTotalHours] = useState<number>(160); // Default 160 hours (4 weeks * 40 hours/week)
+    const [ojtTotalHours, setOjtTotalHours] = useState<number>(160);
     const [showOjtTargetEdit, setShowOjtTargetEdit] = useState(false);
     const [tempOjtHours, setTempOjtHours] = useState<string>('160');
+    const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
+    const [toasts, setToasts] = useState<any[]>([]);
 
     useEffect(() => {
         // Update current time only (for live clock display) in 12-hour format
@@ -195,7 +196,7 @@ export default function Dashboard() {
                 // After successful registration, show message and clear error
                 setErrorMessage(null);
                 setShowFacialModal(false);
-                alert('Face registered successfully! You can now time in.');
+                addToast('✓ Face registered successfully! You can now time in.', 'success');
                 return; // Exit early to prevent catch block
             } else if (verificationMode === 'time-in') {
                 // Save time in with facial encoding
@@ -242,6 +243,7 @@ export default function Dashboard() {
                 setStatus('in');
                 setShowFacialModal(false);
                 setFacialVerified(true);
+                addToast('✓ Time in recorded successfully!', 'success');
                 return; // Exit early to prevent double modal close
             } else if (verificationMode === 'time-out') {
                 // Save time out with facial encoding and overtime flag
@@ -289,6 +291,7 @@ export default function Dashboard() {
                 setStatus('out');
                 setShowFacialModal(false);
                 setFacialVerified(true);
+                addToast('✓ Time out recorded successfully!', 'success');
                 return; // Exit early to prevent double modal close
             }
 
@@ -297,10 +300,10 @@ export default function Dashboard() {
         } catch (error) {
             console.error('Error saving facial data:', error);
             const errorMsg = error instanceof Error ? error.message : 'An error occurred while saving facial data';
-            // Only show alert if there's an actual error message
-            if (errorMsg) {
+            // Only show toast if there's an actual error message
+            if (errorMsg && errorMsg !== '') {
                 setErrorMessage(errorMsg);
-                alert(errorMsg);
+                addToast('❌ ' + errorMsg, 'error');
             }
         } finally {
             setVerificationMode(null);
@@ -441,55 +444,58 @@ export default function Dashboard() {
         fetchTotalHours();
     }, [status]); // Recalculate when status changes (after time-in/out)
 
-    // Fetch monthly attendance data
+    // Fetch attendance logs (previous days)
     useEffect(() => {
-        const fetchMonthlyAttendance = async () => {
+        const fetchAttendanceLogs = async () => {
             try {
-                const year = currentMonth.getFullYear();
-                const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
-                const response = await fetch(`/api/attendance/monthly?month=${month}&year=${year}`);
+                const response = await fetch('/api/attendance/history');
                 if (response.ok) {
                     const data = await response.json();
-                    // Create a map of dates with attendance info
-                    const attendanceMap: Record<string, any> = {};
                     if (data.data && Array.isArray(data.data)) {
-                        data.data.forEach((record: any) => {
-                            const date = record.attendance_date;
-                            attendanceMap[date] = {
-                                timeIn: record.time_in,
-                                timeOut: record.time_out,
-                                isOvertime: record.is_overtime,
-                            };
-                        });
+                        // Sort by date descending (most recent first)
+                        const sorted = data.data.sort((a: any, b: any) => 
+                            new Date(b.attendance_date).getTime() - new Date(a.attendance_date).getTime()
+                        );
+                        setAttendanceLogs(sorted);
                     }
-                    setMonthlyAttendance(attendanceMap);
                 }
             } catch (error) {
-                console.error('Error fetching monthly attendance:', error);
+                console.error('Error fetching attendance logs:', error);
             }
         };
 
-        fetchMonthlyAttendance();
-    }, [currentMonth]);
+        fetchAttendanceLogs();
+    }, [status]); // Refetch when status changes (after time-in/out)
 
-    const getDaysInMonth = (date: Date) => {
-        return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const addToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+        const id = Math.random().toString(36).substr(2, 9);
+        const newToast = { id, message, type };
+        setToasts((prev) => [...prev, newToast]);
+        
+        // Auto remove after 4 seconds
+        setTimeout(() => {
+            setToasts((prev) => prev.filter((t) => t.id !== id));
+        }, 4000);
     };
 
-    const getFirstDayOfMonth = (date: Date) => {
-        return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-    };
+    const calculateHoursWorked = (timeIn: string, timeOut: string): string => {
+        try {
+            const parseTime = (timeStr: string): Date => {
+                const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+                const date = new Date();
+                date.setHours(hours, minutes, seconds || 0, 0);
+                return date;
+            };
 
-    const formatDateKey = (year: number, month: number, day: number) => {
-        return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    };
-
-    const previousMonth = () => {
-        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
-    };
-
-    const nextMonth = () => {
-        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+            const timeInDate = parseTime(timeIn);
+            const timeOutDate = parseTime(timeOut);
+            const diffMs = timeOutDate.getTime() - timeInDate.getTime();
+            const hours = diffMs / (1000 * 60 * 60);
+            return (Math.round(hours * 100) / 100).toFixed(2); // Round to 2 decimal places
+        } catch (error) {
+            console.error('Error calculating hours:', error);
+            return '0.00';
+        }
     };
 
     return (
@@ -504,6 +510,13 @@ export default function Dashboard() {
                     }}
                     onSuccess={handleFacialSuccess}
                     isFirstTime={false}
+                    onError={(message) => {
+                        if (message.includes('Facial verification failed') || message.includes('Wrong face')) {
+                            addToast('❌ ' + message, 'error');
+                        } else {
+                            addToast(message, 'error');
+                        }
+                    }}
                 />
 
                 {/* Error Message */}
@@ -681,106 +694,55 @@ export default function Dashboard() {
                     </div>
                 </Card>
 
-                {/* Calendar */}
+                {/* Attendance Logs */}
                 <Card className="p-6">
                     <div className="space-y-4">
-                        {/* Month Navigation */}
-                        <div className="flex items-center justify-between mb-4">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={previousMonth}
-                            >
-                                <ChevronLeft className="w-4 h-4" />
-                            </Button>
-                            <h3 className="text-lg font-semibold">
-                                {currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-                            </h3>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={nextMonth}
-                            >
-                                <ChevronRight className="w-4 h-4" />
-                            </Button>
-                        </div>
-
-                        {/* Day Headers */}
-                        <div className="grid grid-cols-7 gap-2">
-                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                                <div
-                                    key={day}
-                                    className="text-center text-sm font-semibold text-muted-foreground p-2"
-                                >
-                                    {day}
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Calendar Days */}
-                        <div className="grid grid-cols-7 gap-2">
-                            {Array.from({
-                                length: getFirstDayOfMonth(currentMonth) + getDaysInMonth(currentMonth),
-                            }).map((_, index) => {
-                                const dayNum = index - getFirstDayOfMonth(currentMonth) + 1;
-                                const isCurrentMonth = dayNum > 0 && dayNum <= getDaysInMonth(currentMonth);
-                                const dateKey = isCurrentMonth
-                                    ? formatDateKey(
-                                          currentMonth.getFullYear(),
-                                          currentMonth.getMonth(),
-                                          dayNum
-                                      )
-                                    : '';
-                                const attendance = monthlyAttendance[dateKey];
-                                const today = new Date();
-                                const isToday =
-                                    isCurrentMonth &&
-                                    dayNum === today.getDate() &&
-                                    currentMonth.getMonth() === today.getMonth() &&
-                                    currentMonth.getFullYear() === today.getFullYear();
-
-                                return (
-                                    <div
-                                        key={index}
-                                        className={`p-3 text-center rounded-lg text-sm h-16 flex flex-col items-center justify-center transition-colors ${
-                                            !isCurrentMonth
-                                                ? 'bg-gray-100 dark:bg-gray-800 text-muted-foreground'
-                                                : isToday
-                                                ? 'bg-blue-100 dark:bg-blue-900 border-2 border-blue-500'
-                                                : attendance
-                                                ? 'bg-green-100 dark:bg-green-900 border border-green-500'
-                                                : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
-                                        }`}
-                                    >
-                                        {isCurrentMonth && (
-                                            <>
-                                                <span className="font-semibold">{dayNum}</span>
-                                                {attendance && (
-                                                    <span className="text-xs text-green-700 dark:text-green-300 mt-1">
-                                                        ✓
-                                                    </span>
+                        <h3 className="text-lg font-semibold">Attendance History</h3>
+                        
+                        {attendanceLogs.length === 0 ? (
+                            <p className="text-muted-foreground text-center py-8">No attendance records found</p>
+                        ) : (
+                            <div className="space-y-3">
+                                {attendanceLogs.map((log, index) => {
+                                    const hours = calculateHoursWorked(log.time_in, log.time_out);
+                                    const logDate = new Date(log.attendance_date);
+                                    const dateStr = logDate.toLocaleDateString('en-US', { 
+                                        weekday: 'short', 
+                                        month: 'short', 
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                    });
+                                    
+                                    return (
+                                        <div
+                                            key={index}
+                                            className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                        >
+                                            <div className="flex-1">
+                                                <p className="font-medium">{dateStr}</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {log.time_in} - {log.time_out}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-semibold text-green-600 dark:text-green-400">
+                                                    {hours}h
+                                                </p>
+                                                {log.is_overtime && (
+                                                    <p className="text-xs text-orange-600 dark:text-orange-400">
+                                                        Overtime
+                                                    </p>
                                                 )}
-                                            </>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {/* Legend */}
-                        <div className="flex gap-4 text-xs mt-4 pt-4 border-t">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-blue-100 dark:bg-blue-900 border-2 border-blue-500 rounded" />
-                                <span className="text-muted-foreground">Today</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-green-100 dark:bg-green-900 border border-green-500 rounded" />
-                                <span className="text-muted-foreground">Timed In/Out</span>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </Card>
             </div>
+            <ToastContainer toasts={toasts} onRemove={(id) => setToasts(toasts.filter((t) => t.id !== id))} />
         </AppLayout>
     );
 }

@@ -50,19 +50,25 @@ class AttendanceSeeder extends Seeder
                 continue;
             }
 
-            // Create attendance record
+            // Create attendance record with ±1% time variance for realism
+            // 1% of 8 hours = 4.8 minutes ≈ 288 seconds
+            $variance = rand(-288, 288); // ±1% variance in seconds
+            
+            $timeInAt = $date->copy()->setTime(12, 0, 0)->addSeconds($variance);
+            $timeOutAt = $date->copy()->setTime(20, 0, 0)->addSeconds($variance);
+            
             Attendance::create([
-                'user_id' => $user->id,
+                'user_id' => 2,
                 'attendance_date' => $date->toDateString(),
-                'time_in' => '12:00:00', // 12 PM
-                'time_out' => '20:00:00', // 8 PM
-                'time_in_at' => $date->copy()->setTime(12, 0, 0),
-                'time_out_at' => $date->copy()->setTime(20, 0, 0),
+                'time_in' => $timeInAt->format('H:i:s'),
+                'time_out' => $timeOutAt->format('H:i:s'),
+                'time_in_at' => $timeInAt,
+                'time_out_at' => $timeOutAt,
                 'is_overtime' => false,
                 'verification_method' => 'facial',
             ]);
 
-            $this->command->line("Created attendance for {$date->format('Y-m-d')} (12:00 PM - 8:00 PM)");
+            $this->command->line("Created attendance for {$date->format('Y-m-d')} ({$timeInAt->format('H:i')} - {$timeOutAt->format('H:i')})");
             $created++;
         }
 

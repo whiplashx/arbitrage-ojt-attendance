@@ -135,7 +135,7 @@ class AttendanceController extends Controller
             \Log::warning('Facial verification failed for user: ' . $user->id);
             return response()->json([
                 'success' => false,
-                'message' => 'Facial verification failed. Please try again.',
+                'message' => '❌ Wrong face detected. Please try again.',
             ], 401);
         }
 
@@ -196,7 +196,7 @@ class AttendanceController extends Controller
             \Log::warning('Facial verification failed for user: ' . $user->id);
             return response()->json([
                 'success' => false,
-                'message' => 'Facial verification failed. Please try again.',
+                'message' => '❌ Wrong face detected. Please try again.',
             ], 401);
         }
 
@@ -272,6 +272,23 @@ class AttendanceController extends Controller
             ->whereYear('attendance_date', $year)
             ->whereMonth('attendance_date', $month)
             ->orderBy('attendance_date', 'asc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $attendances,
+        ]);
+    }
+
+    /**
+     * Get all attendance records (history) for the user, sorted by date descending.
+     */
+    public function getAttendanceHistory()
+    {
+        $user = Auth::user();
+
+        $attendances = Attendance::where('user_id', $user->id)
+            ->orderBy('attendance_date', 'desc')
             ->get();
 
         return response()->json([

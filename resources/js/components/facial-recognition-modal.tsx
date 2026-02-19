@@ -10,6 +10,7 @@ interface FacialRecognitionModalProps {
     onClose: () => void;
     onSuccess: (encoding: number[]) => void;
     isFirstTime?: boolean;
+    onError?: (message: string) => void;
 }
 
 interface FaceBox {
@@ -27,6 +28,7 @@ export function FacialRecognitionModal({
     onClose,
     onSuccess,
     isFirstTime = false,
+    onError,
 }: FacialRecognitionModalProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -200,6 +202,9 @@ export function FacialRecognitionModal({
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to capture face';
             setError(message);
+            if (onError) {
+                onError(message);
+            }
             console.error('Capture error:', err);
         } finally {
             setIsLoading(false);
