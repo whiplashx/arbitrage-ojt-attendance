@@ -298,41 +298,53 @@ export function FacialRecognitionModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>
+            <DialogContent className="w-[95vw] max-w-md sm:max-w-md max-h-[95vh] p-3 sm:p-6 flex flex-col gap-3 sm:gap-4">
+                <DialogHeader className="gap-2">
+                    <DialogTitle className="text-lg sm:text-xl">
                         {isFirstTime ? 'Register Your Face' : 'Verify Your Face'}
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="text-xs sm:text-sm">
                         {isFirstTime
                             ? 'Please position your face in the camera for facial recognition registration.'
                             : 'Please position your face in the camera for verification.'}
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3 sm:gap-4 flex-1 overflow-y-auto">
                     {/* Video Stream with Face Detection Box */}
-                    <div className="relative w-full bg-black rounded-lg overflow-hidden aspect-video">
-                        <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            className="w-full h-full object-cover"
-                        />
-                        
-                        {/* Face Detection Box - Draw box at actual face location */}
-                        {facesDetected === 1 && faceBox && (
-                            <div
-                                className="absolute border-2 border-green-500 rounded-lg"
-                                style={{
-                                    left: `${(faceBox.x / (videoRef.current?.videoWidth || 640)) * 100}%`,
-                                    top: `${(faceBox.y / (videoRef.current?.videoHeight || 480)) * 100}%`,
-                                    width: `${(faceBox.width / (videoRef.current?.videoWidth || 640)) * 100}%`,
-                                    height: `${(faceBox.height / (videoRef.current?.videoHeight || 480)) * 100}%`,
-                                    pointerEvents: 'none',
-                                }}
+                    <div className="relative mx-auto bg-black rounded-full overflow-hidden flex-shrink-0" style={{ width: '280px', height: '280px' }}>
+                        <div className="relative w-full h-full">
+                            <video
+                                ref={videoRef}
+                                autoPlay
+                                playsInline
+                                className="w-full h-full object-cover"
                             />
-                        )}
+                            
+                            {/* Face Detection Box - Draw box at actual face location */}
+                            {facesDetected === 1 && faceBox && (
+                                <div
+                                    className="absolute border-3 border-green-500 rounded-lg shadow-lg shadow-green-500"
+                                    style={{
+                                        left: `${(faceBox.x / (videoRef.current?.videoWidth || 640)) * 100}%`,
+                                        top: `${(faceBox.y / (videoRef.current?.videoHeight || 480)) * 100}%`,
+                                        width: `${(faceBox.width / (videoRef.current?.videoWidth || 640)) * 100}%`,
+                                        height: `${(faceBox.height / (videoRef.current?.videoHeight || 480)) * 100}%`,
+                                        pointerEvents: 'none',
+                                        transition: 'all 0.1s ease-out',
+                                    }}
+                                />
+                            )}
+                            
+                            {/* Face Count Status Indicator */}
+                            {facesDetected > 0 && !success && (
+                                <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-white text-xs font-medium flex items-center gap-1 ${
+                                    facesDetected === 1 ? 'bg-green-500' : 'bg-red-500'
+                                }`}>
+                                    {facesDetected === 1 ? '✓ Face detected' : `⚠ ${facesDetected} faces`}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Canvas for Drawing Detection */}
@@ -346,7 +358,7 @@ export function FacialRecognitionModal({
                         <div className="text-center py-2">
                             <div className="flex items-center justify-center gap-2">
                                 <Spinner />
-                                <span className="text-sm text-muted-foreground">
+                                <span className="text-xs sm:text-sm text-muted-foreground">
                                     {modelsInitialized ? 'Detecting face...' : 'Loading models...'}
                                 </span>
                             </div>
@@ -355,55 +367,32 @@ export function FacialRecognitionModal({
 
                     {/* Error Alert */}
                     {error && (
-                        <Alert variant="destructive">
-                            <AlertCircle className="h-4 w-4" />
+                        <Alert variant="destructive" className="text-xs sm:text-sm">
+                            <AlertCircle className="h-4 w-4 flex-shrink-0" />
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     )}
 
                     {/* Success Alert */}
                     {success && (
-                        <Alert className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
-                            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <Alert className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800 text-xs sm:text-sm">
+                            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
                             <AlertDescription className="text-green-800 dark:text-green-100">
                                 Face captured successfully!
                             </AlertDescription>
                         </Alert>
                     )}
 
-                    {/* Face Detected Count */}
-                    {facesDetected > 0 && !success && (
-                        <p className="text-sm text-center text-muted-foreground">
-                            {facesDetected === 1 ? '✓ Face detected' : `⚠ ${facesDetected} faces detected`}
-                        </p>
-                    )}
-
                     {/* Buttons */}
-                    <div className="flex gap-3">
+                    <div className="flex gap-2 sm:gap-3 mt-auto pt-2 sm:pt-0">
                         <Button
                             variant="outline"
                             onClick={onClose}
                             disabled={isLoading}
-                            className="flex-1"
+                            className="flex-1 text-sm sm:text-base h-10 sm:h-11"
                         >
-                            {isFirstTime ? 'Skip for Now' : 'Cancel'}
+                            {isFirstTime ? 'Skip' : 'Cancel'}
                         </Button>
-                        {facesDetected !== 1 && (
-                            <Button
-                                onClick={captureFace}
-                                disabled={isLoading || success}
-                                className="flex-1"
-                            >
-                                {isLoading && <Spinner />}
-                                {success ? '✓ Captured' : 'Capture Face'}
-                            </Button>
-                        )}
-                        {facesDetected === 1 && !success && (
-                            <div className="flex-1 px-4 py-2 bg-green-500 text-white rounded-md text-sm font-medium flex items-center justify-center">
-                                <Spinner />
-                                <span className="ml-2">Auto-capturing...</span>
-                            </div>
-                        )}
                     </div>
                 </div>
             </DialogContent>
