@@ -24,10 +24,20 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ])->validate();
 
-        return User::create([
+        $userData = [
             'name' => $input['name'],
             'email' => $input['email'],
             'password' => $input['password'],
-        ]);
+        ];
+
+        // Add facial encoding if provided during registration
+        if (!empty($input['facial_encoding'])) {
+            $userData['facial_encoding'] = $input['facial_encoding'];
+            $userData['facial_data_hash'] = hash('sha256', $input['facial_encoding']);
+            $userData['facial_registered_at'] = now();
+            $userData['facial_enabled'] = true;
+        }
+
+        return User::create($userData);
     }
 }

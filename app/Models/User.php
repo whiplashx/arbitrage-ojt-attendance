@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -22,6 +24,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'facial_encoding',
+        'facial_data_hash',
+        'facial_registered_at',
+        'facial_enabled',
     ];
 
     /**
@@ -34,6 +40,8 @@ class User extends Authenticatable
         'two_factor_secret',
         'two_factor_recovery_codes',
         'remember_token',
+        'facial_encoding',
+        'facial_data_hash',
     ];
 
     /**
@@ -47,6 +55,24 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'facial_registered_at' => 'datetime',
+            'facial_enabled' => 'boolean',
         ];
+    }
+
+    /**
+     * Get the user's facial recognition record.
+     */
+    public function facialRecognition(): HasOne
+    {
+        return $this->hasOne(FacialRecognition::class);
+    }
+
+    /**
+     * Get the user's attendance records.
+     */
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
     }
 }
