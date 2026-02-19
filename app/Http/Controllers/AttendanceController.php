@@ -252,6 +252,20 @@ class AttendanceController extends Controller
             ->where('attendance_date', $today)
             ->first();
 
+        // Auto time-out logic: if it's past 8 PM and user is timed in without overtime
+        if ($attendance && $attendance->time_in && !$attendance->time_out && !$attendance->is_overtime) {
+            $now = Carbon::now();
+            $workEndTime = $now->clone()->setHour(20)->setMinute(0)->setSecond(0);
+
+            // If current time is past 8 PM, auto time out
+            if ($now->isAfter($workEndTime)) {
+                \Log::info('Auto timing out user ' . $user->id . ' at ' . $now->toDateTimeString());
+                $attendance->update([
+                    'time_out' => $now->format('H:i:s'),
+                ]);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'data' => $attendance,
