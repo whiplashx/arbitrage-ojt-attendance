@@ -257,4 +257,61 @@ class AttendanceController extends Controller
             'data' => $attendance,
         ]);
     }
+
+    /**
+     * Get monthly attendance records.
+     */
+    public function getMonthlyAttendance(Request $request)
+    {
+        $user = Auth::user();
+        $month = $request->input('month', date('m'));
+        $year = $request->input('year', date('Y'));
+
+        // Get all attendance records for the specified month and year
+        $attendances = Attendance::where('user_id', $user->id)
+            ->whereYear('attendance_date', $year)
+            ->whereMonth('attendance_date', $month)
+            ->orderBy('attendance_date', 'asc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $attendances,
+        ]);
+    }
+
+    /**
+     * Get total hours worked across all attendance records.
+     * Calculates the sum of all (time_out - time_in) for each day.
+     */
+    public function getTotalHoursWorked()
+    {
+        $user = Auth::user();
+
+        $attendances = Attendance::where('user_id', $user->id)
+            ->whereNotNull('time_in')
+            ->whereNotNull('time_out')
+            ->get();
+
+        $totalHours = 0;
+
+        foreach ($attendances as $attendance) {
+            $timeIn = \Carbon\Carbon::createFromFormat('H:i:s', $attendance->time_in);
+            $timeOut = \Carbon\Carbon::createFromFormat('H:i:s', $attendance->time_out);
+
+            $diff = $timeOut->diffInSeconds($timeIn);
+            // Handle day wraparound (time_out next day)
+            if ($diff < 0) {
+                $diff += 24 * 3600;
+            }
+            $totalHours += $diff / 3600; // Convert seconds to hours
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_hours' => round($totalHours, 2),
+            ],
+        ]);
+    }
 }

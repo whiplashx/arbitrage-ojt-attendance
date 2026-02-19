@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\FacialRecognitionController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -40,6 +41,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/attendance/time-in', [AttendanceController::class, 'timeIn']);
     Route::post('/api/attendance/time-out', [AttendanceController::class, 'timeOut']);
     Route::get('/api/attendance/today', [AttendanceController::class, 'getTodayAttendance']);
+    Route::get('/api/attendance/monthly', [AttendanceController::class, 'getMonthlyAttendance']);
+    Route::get('/api/attendance/total-hours', [AttendanceController::class, 'getTotalHoursWorked']);
+});
+
+// User Routes
+Route::middleware('auth')->group(function () {
+    Route::get('/api/user/ojt-info', [UserController::class, 'getOjtInfo']);
+    Route::put('/api/user/ojt-info', [UserController::class, 'updateOjtInfo']);
 });
 
 require __DIR__.'/settings.php';

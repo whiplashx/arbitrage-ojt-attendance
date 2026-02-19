@@ -28,6 +28,9 @@ class User extends Authenticatable
         'facial_data_hash',
         'facial_registered_at',
         'facial_enabled',
+        'ojt_start_date',
+        'ojt_end_date',
+        'ojt_total_hours',
     ];
 
     /**
@@ -57,6 +60,9 @@ class User extends Authenticatable
             'two_factor_confirmed_at' => 'datetime',
             'facial_registered_at' => 'datetime',
             'facial_enabled' => 'boolean',
+            'ojt_start_date' => 'date',
+            'ojt_end_date' => 'date',
+            'ojt_total_hours' => 'decimal:2',
         ];
     }
 

@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { FacialRecognitionModal } from '@/components/facial-recognition-modal';
 import type { BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
+import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -45,21 +47,52 @@ export default function Dashboard() {
     const [verificationMode, setVerificationMode] = useState<'registration' | 'time-in' | 'time-out' | null>(null);
     const [facialVerified, setFacialVerified] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [goalHours, setGoalHours] = useState<number>(8);
+    const [showGoalInput, setShowGoalInput] = useState(false);
+    const [tempGoalInput, setTempGoalInput] = useState<string>('8');
+    const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+    const [monthlyAttendance, setMonthlyAttendance] = useState<Record<string, any>>({});
+    const [ojtStartDate, setOjtStartDate] = useState<Date | null>(null);
+    const [ojtEndDate, setOjtEndDate] = useState<Date | null>(null);
+    const [totalHoursWorked, setTotalHoursWorked] = useState<number>(0);
+    const [ojtTotalHours, setOjtTotalHours] = useState<number>(160); // Default 160 hours (4 weeks * 40 hours/week)
 
     useEffect(() => {
-        // Update current time only (for live clock display)
+        // Update current time only (for live clock display) in 12-hour format
+        const formatTime12Hour = (date: Date) => {
+            return date.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true,
+            });
+        };
+
         const interval = setInterval(() => {
-            setCurrentTime(new Date().toLocaleTimeString());
+            setCurrentTime(formatTime12Hour(new Date()));
         }, 1000);
 
         // Set initial time immediately
-        setCurrentTime(new Date().toLocaleTimeString());
+        setCurrentTime(formatTime12Hour(new Date()));
 
         return () => clearInterval(interval);
     }, []);
 
     // Fetch today's attendance record on component mount ONLY ONCE
     useEffect(() => {
+        const convertTo12Hour = (time24: string) => {
+            // Convert 24-hour format (HH:MM:SS) to 12-hour format (H:MM:SS AM/PM)
+            const [hours, minutes, seconds] = time24.split(':');
+            let hour = parseInt(hours, 10);
+            const period = hour >= 12 ? 'PM' : 'AM';
+            if (hour > 12) {
+                hour -= 12;
+            } else if (hour === 0) {
+                hour = 12;
+            }
+            return `${hour}:${minutes}:${seconds} ${period}`;
+        };
+
         const fetchTodayAttendance = async () => {
             try {
                 const response = await fetch('/api/attendance/today');
@@ -70,13 +103,13 @@ export default function Dashboard() {
                         if (data.data.time_in) {
                             // Extract just the time part (HH:MM:SS) from the database
                             const timeInValue = data.data.time_in;
-                            setTimeIn(timeInValue);
+                            setTimeIn(convertTo12Hour(timeInValue));
                             setStatus('in');
                         }
                         if (data.data.time_out) {
                             // Extract just the time part (HH:MM:SS) from the database
                             const timeOutValue = data.data.time_out;
-                            setTimeOut(timeOutValue);
+                            setTimeOut(convertTo12Hour(timeOutValue));
                             setStatus('out');
                         }
                         // Set overtime status
@@ -117,6 +150,19 @@ export default function Dashboard() {
     };
 
     const handleFacialSuccess = async (encoding: number[]) => {
+        const convertTo12Hour = (time24: string) => {
+            // Convert 24-hour format (HH:MM:SS) to 12-hour format (H:MM:SS AM/PM)
+            const [hours, minutes, seconds] = time24.split(':');
+            let hour = parseInt(hours, 10);
+            const period = hour >= 12 ? 'PM' : 'AM';
+            if (hour > 12) {
+                hour -= 12;
+            } else if (hour === 0) {
+                hour = 12;
+            }
+            return `${hour}:${minutes}:${seconds} ${period}`;
+        };
+
         try {
             // Get CSRF token from meta tag
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -185,11 +231,11 @@ export default function Dashboard() {
                 setRequiresFacialVerification(false);
                 // Use the time from the server response, not client time
                 if (data.data && data.data.time_in) {
-                    // Extract only the time part (HH:MM:SS)
+                    // Extract only the time part (HH:MM:SS) and convert to 12-hour format
                     const timeValue = data.data.time_in.split(' ').pop() || data.data.time_in;
-                    setTimeIn(timeValue);
+                    setTimeIn(convertTo12Hour(timeValue));
                 } else {
-                    setTimeIn(new Date().toLocaleTimeString());
+                    setTimeIn(new Date().toLocaleTimeString('en-US', { hour12: true }));
                 }
                 setStatus('in');
                 setShowFacialModal(false);
@@ -232,11 +278,11 @@ export default function Dashboard() {
                 setRequiresFacialVerification(false);
                 // Use the time from the server response, not client time
                 if (data.data && data.data.time_out) {
-                    // Extract only the time part (HH:MM:SS)
+                    // Extract only the time part (HH:MM:SS) and convert to 12-hour format
                     const timeValue = data.data.time_out.split(' ').pop() || data.data.time_out;
-                    setTimeOut(timeValue);
+                    setTimeOut(convertTo12Hour(timeValue));
                 } else {
-                    setTimeOut(new Date().toLocaleTimeString());
+                    setTimeOut(new Date().toLocaleTimeString('en-US', { hour12: true }));
                 }
                 setStatus('out');
                 setShowFacialModal(false);
@@ -266,6 +312,153 @@ export default function Dashboard() {
             return `Working Hours: 12:00 PM - 8:00 PM + Overtime`;
         }
         return `Working Hours: 12:00 PM - 8:00 PM`;
+    };
+
+    const calculateWorkedHours = () => {
+        if (!timeIn || !timeOut) return 0;
+        
+        try {
+            // Parse 12-hour format time back to minutes
+            const parseTime = (time12: string) => {
+                const [time, period] = time12.split(' ');
+                const [hours, minutes] = time.split(':');
+                let hour = parseInt(hours, 10);
+                if (period === 'PM' && hour !== 12) {
+                    hour += 12;
+                } else if (period === 'AM' && hour === 12) {
+                    hour = 0;
+                }
+                return hour * 60 + parseInt(minutes, 10);
+            };
+
+            const inMinutes = parseTime(timeIn);
+            const outMinutes = parseTime(timeOut);
+            
+            let diffMinutes = outMinutes - inMinutes;
+            if (diffMinutes < 0) {
+                diffMinutes += 24 * 60; // Handle day wraparound
+            }
+            
+            return parseFloat((diffMinutes / 60).toFixed(2));
+        } catch (error) {
+            console.error('Error calculating worked hours:', error);
+            return 0;
+        }
+    };
+
+    const handleSaveGoalHours = () => {
+        const newGoal = parseFloat(tempGoalInput);
+        if (!isNaN(newGoal) && newGoal > 0) {
+            setGoalHours(newGoal);
+            setShowGoalInput(false);
+            localStorage.setItem('goalHours', newGoal.toString());
+        }
+    };
+
+    // Load goal hours from localStorage
+    useEffect(() => {
+        const saved = localStorage.getItem('goalHours');
+        if (saved) {
+            setGoalHours(parseFloat(saved));
+            setTempGoalInput(saved);
+        }
+    }, []);
+
+    // Fetch OJT dates and total hours worked from user profile
+    useEffect(() => {
+        const fetchOjtData = async () => {
+            try {
+                const response = await fetch('/api/user/ojt-info');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data) {
+                        if (data.data.ojt_start_date) {
+                            setOjtStartDate(new Date(data.data.ojt_start_date));
+                        }
+                        if (data.data.ojt_end_date) {
+                            setOjtEndDate(new Date(data.data.ojt_end_date));
+                        }
+                        if (data.data.ojt_total_hours) {
+                            setOjtTotalHours(data.data.ojt_total_hours);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching OJT data:', error);
+            }
+        };
+
+        fetchOjtData();
+    }, []);
+
+    // Fetch total hours worked across all attendance records
+    useEffect(() => {
+        const fetchTotalHours = async () => {
+            try {
+                const response = await fetch('/api/attendance/total-hours');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data && data.data.total_hours !== undefined) {
+                        setTotalHoursWorked(data.data.total_hours);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching total hours:', error);
+            }
+        };
+
+        fetchTotalHours();
+    }, [status]); // Recalculate when status changes (after time-in/out)
+
+    // Fetch monthly attendance data
+    useEffect(() => {
+        const fetchMonthlyAttendance = async () => {
+            try {
+                const year = currentMonth.getFullYear();
+                const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+                const response = await fetch(`/api/attendance/monthly?month=${month}&year=${year}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    // Create a map of dates with attendance info
+                    const attendanceMap: Record<string, any> = {};
+                    if (data.data && Array.isArray(data.data)) {
+                        data.data.forEach((record: any) => {
+                            const date = record.attendance_date;
+                            attendanceMap[date] = {
+                                timeIn: record.time_in,
+                                timeOut: record.time_out,
+                                isOvertime: record.is_overtime,
+                            };
+                        });
+                    }
+                    setMonthlyAttendance(attendanceMap);
+                }
+            } catch (error) {
+                console.error('Error fetching monthly attendance:', error);
+            }
+        };
+
+        fetchMonthlyAttendance();
+    }, [currentMonth]);
+
+    const getDaysInMonth = (date: Date) => {
+        return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    };
+
+    const getFirstDayOfMonth = (date: Date) => {
+        return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    };
+
+    const formatDateKey = (year: number, month: number, day: number) => {
+        return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    };
+
+    const previousMonth = () => {
+        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
+    };
+
+    const nextMonth = () => {
+        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
     };
 
     return (
@@ -366,6 +559,162 @@ export default function Dashboard() {
                         </p>
                     </Card>
                 )}
+
+                {/* Progress - Overall OJT Progress */}
+                <Card className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold">OJT Progress</h3>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="text-center">
+                            <p className="text-sm text-muted-foreground mb-2">Total Hours Completed</p>
+                            <p className="text-3xl font-bold">{totalHoursWorked.toFixed(2)}</p>
+                            <p className="text-sm text-muted-foreground mt-1">Target: {ojtTotalHours} hours</p>
+                        </div>
+
+                        {ojtStartDate && ojtEndDate && (
+                            <div className="grid grid-cols-2 gap-4 text-center text-sm">
+                                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                                    <p className="text-muted-foreground mb-1">Start Date</p>
+                                    <p className="font-semibold">{ojtStartDate.toLocaleDateString()}</p>
+                                </div>
+                                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                                    <p className="text-muted-foreground mb-1">End Date</p>
+                                    <p className="font-semibold">{ojtEndDate.toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Progress Bar */}
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                            <div
+                                className={`h-full transition-all ${
+                                    totalHoursWorked >= ojtTotalHours
+                                        ? 'bg-green-500'
+                                        : totalHoursWorked >= (ojtTotalHours * 0.75)
+                                        ? 'bg-blue-500'
+                                        : 'bg-yellow-500'
+                                }`}
+                                style={{
+                                    width: `${Math.min((totalHoursWorked / ojtTotalHours) * 100, 100)}%`,
+                                }}
+                            />
+                        </div>
+
+                        <div className="text-center text-sm">
+                            {totalHoursWorked >= ojtTotalHours ? (
+                                <p className="text-green-600 dark:text-green-400 font-medium">
+                                    ✓ OJT Target Achieved! ({((totalHoursWorked / ojtTotalHours) * 100).toFixed(0)}%)
+                                </p>
+                            ) : (
+                                <p className="text-muted-foreground">
+                                    {(ojtTotalHours - totalHoursWorked).toFixed(2)} hours remaining ({((totalHoursWorked / ojtTotalHours) * 100).toFixed(1)}%)
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </Card>
+
+                {/* Calendar */}
+                <Card className="p-6">
+                    <div className="space-y-4">
+                        {/* Month Navigation */}
+                        <div className="flex items-center justify-between mb-4">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={previousMonth}
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </Button>
+                            <h3 className="text-lg font-semibold">
+                                {currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+                            </h3>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={nextMonth}
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </Button>
+                        </div>
+
+                        {/* Day Headers */}
+                        <div className="grid grid-cols-7 gap-2">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                                <div
+                                    key={day}
+                                    className="text-center text-sm font-semibold text-muted-foreground p-2"
+                                >
+                                    {day}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Calendar Days */}
+                        <div className="grid grid-cols-7 gap-2">
+                            {Array.from({
+                                length: getFirstDayOfMonth(currentMonth) + getDaysInMonth(currentMonth),
+                            }).map((_, index) => {
+                                const dayNum = index - getFirstDayOfMonth(currentMonth) + 1;
+                                const isCurrentMonth = dayNum > 0 && dayNum <= getDaysInMonth(currentMonth);
+                                const dateKey = isCurrentMonth
+                                    ? formatDateKey(
+                                          currentMonth.getFullYear(),
+                                          currentMonth.getMonth(),
+                                          dayNum
+                                      )
+                                    : '';
+                                const attendance = monthlyAttendance[dateKey];
+                                const today = new Date();
+                                const isToday =
+                                    isCurrentMonth &&
+                                    dayNum === today.getDate() &&
+                                    currentMonth.getMonth() === today.getMonth() &&
+                                    currentMonth.getFullYear() === today.getFullYear();
+
+                                return (
+                                    <div
+                                        key={index}
+                                        className={`p-3 text-center rounded-lg text-sm h-16 flex flex-col items-center justify-center transition-colors ${
+                                            !isCurrentMonth
+                                                ? 'bg-gray-100 dark:bg-gray-800 text-muted-foreground'
+                                                : isToday
+                                                ? 'bg-blue-100 dark:bg-blue-900 border-2 border-blue-500'
+                                                : attendance
+                                                ? 'bg-green-100 dark:bg-green-900 border border-green-500'
+                                                : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+                                        }`}
+                                    >
+                                        {isCurrentMonth && (
+                                            <>
+                                                <span className="font-semibold">{dayNum}</span>
+                                                {attendance && (
+                                                    <span className="text-xs text-green-700 dark:text-green-300 mt-1">
+                                                        ✓
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Legend */}
+                        <div className="flex gap-4 text-xs mt-4 pt-4 border-t">
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-blue-100 dark:bg-blue-900 border-2 border-blue-500 rounded" />
+                                <span className="text-muted-foreground">Today</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-green-100 dark:bg-green-900 border border-green-500 rounded" />
+                                <span className="text-muted-foreground">Timed In/Out</span>
+                            </div>
+                        </div>
+                    </div>
+                </Card>
             </div>
         </AppLayout>
     );

@@ -318,7 +318,7 @@ export function FacialRecognitionModal({
                         {/* Face Detection Box - Draw box at actual face location */}
                         {facesDetected === 1 && faceBox && (
                             <div
-                                className="absolute border-4 border-green-500 rounded-lg flex items-center justify-center"
+                                className="absolute border-2 border-green-500 rounded-lg"
                                 style={{
                                     left: `${(faceBox.x / (videoRef.current?.videoWidth || 640)) * 100}%`,
                                     top: `${(faceBox.y / (videoRef.current?.videoHeight || 480)) * 100}%`,
@@ -326,22 +326,7 @@ export function FacialRecognitionModal({
                                     height: `${(faceBox.height / (videoRef.current?.videoHeight || 480)) * 100}%`,
                                     pointerEvents: 'none',
                                 }}
-                            >
-                                <span className="text-green-500 text-xs font-bold text-center bg-green-500 bg-opacity-20 px-2 py-1 rounded">
-                                    ✓ Face
-                                </span>
-                            </div>
-                        )}
-                        
-                        {/* Multiple Faces Warning Box */}
-                        {facesDetected > 1 && (
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="border-4 border-red-500 rounded-lg w-48 h-64 opacity-100 flex items-center justify-center">
-                                    <span className="text-red-500 text-sm font-bold text-center">
-                                        ⚠ Multiple Faces
-                                    </span>
-                                </div>
-                            </div>
+                            />
                         )}
                     </div>
 
