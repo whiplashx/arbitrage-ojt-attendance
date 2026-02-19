@@ -296,15 +296,32 @@ class AttendanceController extends Controller
         $totalHours = 0;
 
         foreach ($attendances as $attendance) {
-            $timeIn = \Carbon\Carbon::createFromFormat('H:i:s', $attendance->time_in);
-            $timeOut = \Carbon\Carbon::createFromFormat('H:i:s', $attendance->time_out);
+            try {
+                // Parse time strings (HH:MM:SS format)
+                $timeParts = explode(':', $attendance->time_in);
+                $inHours = (int)$timeParts[0];
+                $inMinutes = (int)$timeParts[1];
+                $inSeconds = (int)($timeParts[2] ?? 0);
+                $inTotalSeconds = $inHours * 3600 + $inMinutes * 60 + $inSeconds;
 
-            $diff = $timeOut->diffInSeconds($timeIn);
-            // Handle day wraparound (time_out next day)
-            if ($diff < 0) {
-                $diff += 24 * 3600;
+                $timeParts = explode(':', $attendance->time_out);
+                $outHours = (int)$timeParts[0];
+                $outMinutes = (int)$timeParts[1];
+                $outSeconds = (int)($timeParts[2] ?? 0);
+                $outTotalSeconds = $outHours * 3600 + $outMinutes * 60 + $outSeconds;
+
+                $diff = $outTotalSeconds - $inTotalSeconds;
+                
+                // Handle day wraparound (time_out next day)
+                if ($diff < 0) {
+                    $diff += 24 * 3600; // Add 24 hours
+                }
+                
+                $totalHours += $diff / 3600; // Convert seconds to hours
+            } catch (\Exception $e) {
+                \Log::error('Error calculating hours for attendance ' . $attendance->id . ': ' . $e->getMessage());
+                continue;
             }
-            $totalHours += $diff / 3600; // Convert seconds to hours
         }
 
         return response()->json([

@@ -56,6 +56,8 @@ export default function Dashboard() {
     const [ojtEndDate, setOjtEndDate] = useState<Date | null>(null);
     const [totalHoursWorked, setTotalHoursWorked] = useState<number>(0);
     const [ojtTotalHours, setOjtTotalHours] = useState<number>(160); // Default 160 hours (4 weeks * 40 hours/week)
+    const [showOjtTargetEdit, setShowOjtTargetEdit] = useState(false);
+    const [tempOjtHours, setTempOjtHours] = useState<string>('160');
 
     useEffect(() => {
         // Update current time only (for live clock display) in 12-hour format
@@ -355,6 +357,33 @@ export default function Dashboard() {
         }
     };
 
+    const handleSaveOjtTargetHours = async () => {
+        const newTarget = parseFloat(tempOjtHours);
+        if (!isNaN(newTarget) && newTarget > 0) {
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                const response = await fetch('/api/user/ojt-info', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-Token': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        ojt_total_hours: newTarget,
+                    }),
+                });
+
+                if (response.ok) {
+                    setOjtTotalHours(newTarget);
+                    setShowOjtTargetEdit(false);
+                }
+            } catch (error) {
+                console.error('Error updating OJT target hours:', error);
+            }
+        }
+    };
+
     // Load goal hours from localStorage
     useEffect(() => {
         const saved = localStorage.getItem('goalHours');
@@ -379,7 +408,9 @@ export default function Dashboard() {
                             setOjtEndDate(new Date(data.data.ojt_end_date));
                         }
                         if (data.data.ojt_total_hours) {
-                            setOjtTotalHours(data.data.ojt_total_hours);
+                            const hours = parseFloat(data.data.ojt_total_hours);
+                            setOjtTotalHours(hours);
+                            setTempOjtHours(hours.toString());
                         }
                     }
                 }
@@ -564,13 +595,47 @@ export default function Dashboard() {
                 <Card className="p-6">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold">OJT Progress</h3>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                setShowOjtTargetEdit(!showOjtTargetEdit);
+                                setTempOjtHours(ojtTotalHours.toString());
+                            }}
+                            className="gap-2"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Set Target
+                        </Button>
                     </div>
+
+                    {showOjtTargetEdit && (
+                        <div className="flex gap-2 mb-4">
+                            <Input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={tempOjtHours}
+                                onChange={(e) => setTempOjtHours(e.target.value)}
+                                placeholder="Enter target hours"
+                                className="flex-1"
+                            />
+                            <Button onClick={handleSaveOjtTargetHours} size="sm">Save</Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowOjtTargetEdit(false)}
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    )}
 
                     <div className="space-y-4">
                         <div className="text-center">
                             <p className="text-sm text-muted-foreground mb-2">Total Hours Completed</p>
                             <p className="text-3xl font-bold">{totalHoursWorked.toFixed(2)}</p>
-                            <p className="text-sm text-muted-foreground mt-1">Target: {ojtTotalHours} hours</p>
+                            <p className="text-sm text-muted-foreground mt-1">Target: {ojtTotalHours.toFixed(2)} hours</p>
                         </div>
 
                         {ojtStartDate && ojtEndDate && (
