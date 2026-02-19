@@ -17,7 +17,7 @@ class FacialRecognition extends Model
     ];
 
     protected $casts = [
-        'encoding' => 'array',
+        'encoding' => 'array', // Automatically cast to/from JSON
         'registered_at' => 'datetime',
         'last_verified_at' => 'datetime',
         'is_active' => 'boolean',

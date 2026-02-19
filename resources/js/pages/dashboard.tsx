@@ -44,25 +44,73 @@ export default function Dashboard() {
     const [requiresFacialVerification, setRequiresFacialVerification] = useState(false);
     const [verificationMode, setVerificationMode] = useState<'registration' | 'time-in' | 'time-out' | null>(null);
     const [facialVerified, setFacialVerified] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
-        // Update current time
+        // Update current time only (for live clock display)
         const interval = setInterval(() => {
             setCurrentTime(new Date().toLocaleTimeString());
         }, 1000);
 
+        // Set initial time immediately
+        setCurrentTime(new Date().toLocaleTimeString());
+
         return () => clearInterval(interval);
     }, []);
 
+    // Fetch today's attendance record on component mount ONLY ONCE
+    useEffect(() => {
+        const fetchTodayAttendance = async () => {
+            try {
+                const response = await fetch('/api/attendance/today');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data) {
+                        // Set time in and time out from database
+                        if (data.data.time_in) {
+                            // Extract just the time part (HH:MM:SS) from the database
+                            const timeInValue = data.data.time_in;
+                            setTimeIn(timeInValue);
+                            setStatus('in');
+                        }
+                        if (data.data.time_out) {
+                            // Extract just the time part (HH:MM:SS) from the database
+                            const timeOutValue = data.data.time_out;
+                            setTimeOut(timeOutValue);
+                            setStatus('out');
+                        }
+                        // Set overtime status
+                        if (data.data.is_overtime) {
+                            setIsOvertime(data.data.is_overtime);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching attendance:', error);
+            }
+        };
+
+        fetchTodayAttendance();
+    }, []); // Empty dependency array = run only on mount
+
     const handleTimeIn = () => {
-        // Existing user needs verification
-        setVerificationMode('time-in');
-        setRequiresFacialVerification(true);
-        setShowFacialModal(true);
+        // If first time user, ask them to register face first
+        if (isFirstTimeUser) {
+            setErrorMessage('Please register your face first before timing in');
+            setVerificationMode('registration');
+            setShowFacialModal(true);
+        } else {
+            // Existing user needs verification
+            setErrorMessage(null);
+            setVerificationMode('time-in');
+            setRequiresFacialVerification(true);
+            setShowFacialModal(true);
+        }
     };
 
     const handleTimeOut = () => {
         // Time out also requires facial verification
+        setErrorMessage(null);
         setVerificationMode('time-out');
         setRequiresFacialVerification(true);
         setShowFacialModal(true);
@@ -95,6 +143,12 @@ export default function Dashboard() {
 
                 const data = await response.json();
                 console.log('Facial encoding saved successfully:', data);
+                
+                // After successful registration, show message and clear error
+                setErrorMessage(null);
+                setShowFacialModal(false);
+                alert('Face registered successfully! You can now time in.');
+                return; // Exit early to prevent catch block
             } else if (verificationMode === 'time-in') {
                 // Save time in with facial encoding
                 console.log('Saving time in with facial encoding...');
@@ -110,19 +164,37 @@ export default function Dashboard() {
                     }),
                 });
 
+                const data = await response.json();
+                
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.message || 'Failed to record time in');
+                    // If already timed in, that's not an error - just show info
+                    if (response.status === 400 && data.message && data.message.includes('already timed in')) {
+                        console.log('Already timed in today:', data.message);
+                        setErrorMessage(null);
+                        setShowFacialModal(false);
+                        setFacialVerified(true);
+                        throw new Error(''); // Throw empty error to skip catch block alert
+                    }
+                    throw new Error(data.message || 'Failed to record time in');
                 }
 
-                const data = await response.json();
                 console.log('Time in recorded successfully:', data);
                 
-                // Update UI
+                // Update UI with server response data
+                setErrorMessage(null);
                 setRequiresFacialVerification(false);
-                const now = new Date().toLocaleTimeString();
-                setTimeIn(now);
+                // Use the time from the server response, not client time
+                if (data.data && data.data.time_in) {
+                    // Extract only the time part (HH:MM:SS)
+                    const timeValue = data.data.time_in.split(' ').pop() || data.data.time_in;
+                    setTimeIn(timeValue);
+                } else {
+                    setTimeIn(new Date().toLocaleTimeString());
+                }
                 setStatus('in');
+                setShowFacialModal(false);
+                setFacialVerified(true);
+                return; // Exit early to prevent double modal close
             } else if (verificationMode === 'time-out') {
                 // Save time out with facial encoding and overtime flag
                 console.log('Saving time out with facial encoding...');
@@ -139,29 +211,53 @@ export default function Dashboard() {
                     }),
                 });
 
+                const data = await response.json();
+                
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.message || 'Failed to record time out');
+                    // If already timed out, that's not an error - just show info
+                    if (response.status === 400 && data.message && data.message.includes('already timed out')) {
+                        console.log('Already timed out today:', data.message);
+                        setErrorMessage(null);
+                        setShowFacialModal(false);
+                        setFacialVerified(true);
+                        throw new Error(''); // Throw empty error to skip catch block alert
+                    }
+                    throw new Error(data.message || 'Failed to record time out');
                 }
 
-                const data = await response.json();
                 console.log('Time out recorded successfully:', data);
                 
-                // Update UI
+                // Update UI with server response data
+                setErrorMessage(null);
                 setRequiresFacialVerification(false);
-                const now = new Date().toLocaleTimeString();
-                setTimeOut(now);
+                // Use the time from the server response, not client time
+                if (data.data && data.data.time_out) {
+                    // Extract only the time part (HH:MM:SS)
+                    const timeValue = data.data.time_out.split(' ').pop() || data.data.time_out;
+                    setTimeOut(timeValue);
+                } else {
+                    setTimeOut(new Date().toLocaleTimeString());
+                }
                 setStatus('out');
+                setShowFacialModal(false);
+                setFacialVerified(true);
+                return; // Exit early to prevent double modal close
             }
 
             setShowFacialModal(false);
             setFacialVerified(true);
         } catch (error) {
             console.error('Error saving facial data:', error);
-            // Show error toast to user
-            alert(error instanceof Error ? error.message : 'An error occurred while saving facial data');
+            const errorMsg = error instanceof Error ? error.message : 'An error occurred while saving facial data';
+            // Only show alert if there's an actual error message
+            if (errorMsg) {
+                setErrorMessage(errorMsg);
+                alert(errorMsg);
+            }
         } finally {
             setVerificationMode(null);
+            // Make sure modal is closed
+            setShowFacialModal(false);
         }
     };
 
@@ -185,6 +281,15 @@ export default function Dashboard() {
                     onSuccess={handleFacialSuccess}
                     isFirstTime={false}
                 />
+
+                {/* Error Message */}
+                {errorMessage && (
+                    <Card className="p-4 bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800">
+                        <p className="text-center text-red-800 dark:text-red-100">
+                            {errorMessage}
+                        </p>
+                    </Card>
+                )}
 
                 {/* Current Time Display */}
                 <Card className="p-6">

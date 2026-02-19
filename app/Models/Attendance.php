@@ -21,8 +21,8 @@ class Attendance extends Model
 
     protected $casts = [
         'attendance_date' => 'date',
-        'time_in' => 'datetime:H:i:s',
-        'time_out' => 'datetime:H:i:s',
+        'time_in' => 'string', // Store as string (HH:MM:SS) since column is TIME
+        'time_out' => 'string', // Store as string (HH:MM:SS) since column is TIME
         'time_in_at' => 'datetime',
         'time_out_at' => 'datetime',
         'is_overtime' => 'boolean',

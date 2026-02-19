@@ -20,6 +20,7 @@ interface FaceBox {
 }
 
 let modelsLoaded = false;
+let captureInProgress = false; // Prevent double captures
 
 export function FacialRecognitionModal({
     isOpen,
@@ -104,6 +105,13 @@ export function FacialRecognitionModal({
 
     const captureFace = async () => {
         try {
+            // Prevent double captures
+            if (captureInProgress) {
+                console.log('Capture already in progress, skipping...');
+                return;
+            }
+            
+            captureInProgress = true;
             setIsLoading(true);
             setError(null);
 
@@ -195,6 +203,7 @@ export function FacialRecognitionModal({
             console.error('Capture error:', err);
         } finally {
             setIsLoading(false);
+            captureInProgress = false;
         }
     };
 
@@ -203,7 +212,7 @@ export function FacialRecognitionModal({
         let interval: NodeJS.Timeout | null = null;
 
         const autoCaptureInterval = async () => {
-            if (!isOpen || isLoading || success || !modelsInitialized) {
+            if (!isOpen || isLoading || success || !modelsInitialized || captureInProgress) {
                 return;
             }
 
@@ -242,7 +251,7 @@ export function FacialRecognitionModal({
                     
                     // Trigger auto-capture after a short delay to ensure stable detection
                     setTimeout(() => {
-                        if (facesDetected === 1 && !success) {
+                        if (facesDetected === 1 && !success && !captureInProgress) {
                             captureFace();
                         }
                     }, 500);
@@ -272,11 +281,13 @@ export function FacialRecognitionModal({
 
     useEffect(() => {
         if (isOpen) {
+            captureInProgress = false; // Reset capture flag when modal opens
             startVideoStream();
         }
 
         return () => {
             stopVideoStream();
+            captureInProgress = false; // Reset capture flag when modal closes
         };
     }, [isOpen]);
 
