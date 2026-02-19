@@ -32,10 +32,13 @@ class AttendanceController extends Controller
 
     /**
      * Verify if the provided encoding matches the user's registered face.
-     * Distance threshold of 0.45 is used (0 = identical, 1 = completely different).
+     * Distance threshold of 0.40 is used (0 = identical, 1 = completely different).
      * Lower threshold = stricter face matching
+     * Testing shows:
+     * - Same face: ~0.21-0.31
+     * - Different face: ~0.48-0.51
      */
-    private function verifyFacialEncoding(int $userId, array $encoding, float $threshold = 0.45): bool
+    private function verifyFacialEncoding(int $userId, array $encoding, float $threshold = 0.40): bool
     {
         $facialRecognition = FacialRecognition::where('user_id', $userId)
             ->where('is_active', true)
