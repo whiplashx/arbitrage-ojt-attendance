@@ -319,6 +319,7 @@ export function FacialRecognitionModal({
                                 autoPlay
                                 playsInline
                                 className="w-full h-full object-cover"
+                                style={{ transform: 'scaleX(-1)' }}
                             />
                             
                             {/* Face Detection Box - Draw box at actual face location */}
