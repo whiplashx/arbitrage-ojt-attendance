@@ -29,6 +29,18 @@ Route::get('biometrics', function () {
     ]);
 })->middleware(['auth', 'verified'])->name('biometrics');
 
+Route::get('trainee-info', function () {
+    return Inertia::render('trainee-info');
+})->middleware(['auth', 'verified'])->name('trainee-info');
+
+Route::get('attendance-records', function () {
+    return Inertia::render('attendance-records');
+})->middleware(['auth', 'verified'])->name('attendance-records');
+
+Route::get('daily-time-record', function () {
+    return Inertia::render('daily-time-record');
+})->middleware(['auth', 'verified'])->name('daily-time-record');
+
 // Facial Recognition Routes
 Route::post('/api/facial-recognition/store', [FacialRecognitionController::class, 'storeFacialData'])->middleware('auth');
 Route::post('/api/facial-recognition/verify', [FacialRecognitionController::class, 'verifyFacialData']);
@@ -43,13 +55,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/attendance/today', [AttendanceController::class, 'getTodayAttendance']);
     Route::get('/api/attendance/monthly', [AttendanceController::class, 'getMonthlyAttendance']);
     Route::get('/api/attendance/history', [AttendanceController::class, 'getAttendanceHistory']);
+    Route::get('/api/attendance/all', [AttendanceController::class, 'getAllAttendance']);
+    Route::get('/api/attendance/month/{month}', [AttendanceController::class, 'getAttendanceByMonth']);
     Route::get('/api/attendance/total-hours', [AttendanceController::class, 'getTotalHoursWorked']);
+    Route::put('/api/attendance/{id}/task', [AttendanceController::class, 'updateDailyTask']);
 });
 
 // User Routes
 Route::middleware('auth')->group(function () {
     Route::get('/api/user/ojt-info', [UserController::class, 'getOjtInfo']);
     Route::put('/api/user/ojt-info', [UserController::class, 'updateOjtInfo']);
+    Route::put('/api/user/trainee-info', [UserController::class, 'updateTraineeInfo']);
 });
 
 require __DIR__.'/settings.php';

@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Clock, Fingerprint } from 'lucide-react';
+import { Clock, Fingerprint, FileText, User, CalendarRange } from 'lucide-react';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -26,6 +26,21 @@ const mainNavItems: NavItem[] = [
         title: 'Biometrics',
         href: '/biometrics',
         icon: Fingerprint,
+    },
+    {
+        title: 'Trainee Info',
+        href: '/trainee-info',
+        icon: User,
+    },
+    {
+        title: 'Attendance Records',
+        href: '/attendance-records',
+        icon: FileText,
+    },
+    {
+        title: 'Daily Time Record',
+        href: '/daily-time-record',
+        icon: CalendarRange,
     },
 ];
 

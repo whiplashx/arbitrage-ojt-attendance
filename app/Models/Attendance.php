@@ -17,6 +17,7 @@ class Attendance extends Model
         'is_overtime',
         'verification_method',
         'notes',
+        'daily_task',
     ];
 
     protected $casts = [

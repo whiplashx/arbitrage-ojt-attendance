@@ -362,4 +362,103 @@ class AttendanceController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Get all attendance records for the authenticated user.
+     */
+    public function getAllAttendance()
+    {
+        $user = Auth::user();
+
+        $attendances = Attendance::where('user_id', $user->id)
+            ->orderBy('attendance_date', 'desc')
+            ->get()
+            ->map(function ($attendance) {
+                return [
+                    'id' => $attendance->id,
+                    'attendance_date' => $attendance->attendance_date,
+                    'time_in' => $attendance->time_in,
+                    'time_out' => $attendance->time_out,
+                    'is_overtime' => $attendance->is_overtime,
+                    'daily_task' => $attendance->daily_task,
+                    'notes' => $attendance->notes,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $attendances,
+        ]);
+    }
+
+    /**
+     * Get attendance records for a specific month.
+     */
+    public function getAttendanceByMonth($month)
+    {
+        $user = Auth::user();
+
+        // Validate month format (YYYY-MM)
+        if (!preg_match('/^\d{4}-\d{2}$/', $month)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid month format. Use YYYY-MM',
+            ], 400);
+        }
+
+        $attendances = Attendance::where('user_id', $user->id)
+            ->whereMonth('attendance_date', substr($month, 5, 2))
+            ->whereYear('attendance_date', substr($month, 0, 4))
+            ->orderBy('attendance_date', 'asc')
+            ->get()
+            ->map(function ($attendance) {
+                return [
+                    'id' => $attendance->id,
+                    'attendance_date' => $attendance->attendance_date,
+                    'time_in' => $attendance->time_in,
+                    'time_out' => $attendance->time_out,
+                    'is_overtime' => $attendance->is_overtime,
+                    'daily_task' => $attendance->daily_task,
+                    'notes' => $attendance->notes,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $attendances,
+        ]);
+    }
+
+    /**
+     * Update daily task for an attendance record.
+     */
+    public function updateDailyTask(Request $request, $id)
+    {
+        $request->validate([
+            'daily_task' => 'required|string|max:1000',
+        ]);
+
+        $user = Auth::user();
+        $attendance = Attendance::where('id', $id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$attendance) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Attendance record not found',
+            ], 404);
+        }
+
+        $attendance->update([
+            'daily_task' => $request->input('daily_task'),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Daily task updated successfully',
+            'data' => $attendance,
+        ]);
+    }
 }
+

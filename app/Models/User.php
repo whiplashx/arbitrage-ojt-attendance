@@ -22,8 +22,12 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'trainee_name',
         'email',
         'password',
+        'course_qualification',
+        'agency_company',
+        'on_site_supervisor',
         'facial_encoding',
         'facial_data_hash',
         'facial_registered_at',
