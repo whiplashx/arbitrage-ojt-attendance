@@ -60,5 +60,5 @@ class AttendanceSeeder extends Seeder
 
         $this->command->info("✓ Seeding completed!");
         $this->command->info("Total attendance records inserted for user_id 1: " . count($attendances));
-    }
+   }
 }

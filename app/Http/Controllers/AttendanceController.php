@@ -253,15 +253,31 @@ class AttendanceController extends Controller
             ->first();
 
         // Auto time-out logic: if it's past 8 PM and user is timed in without overtime
+        // NOTE: Do not auto time-out users who timed in after 8 PM (they logged in late).
         if ($attendance && $attendance->time_in && !$attendance->time_out && !$attendance->is_overtime) {
             $now = Carbon::now();
-            $workEndTime = $now->clone()->setHour(20)->setMinute(0)->setSecond(0);
+            $workEndTime = $now->copy()->setTime(20, 0, 0);
 
-            // If current time is past 8 PM, auto time out
-            if ($now->isAfter($workEndTime)) {
-                \Log::info('Auto timing out user ' . $user->id . ' at ' . $now->toDateTimeString());
+            // Determine the actual time-in datetime. Prefer time_in_at (datetime),
+            // otherwise construct from the stored time_in (H:i:s) for today's date.
+            try {
+                if ($attendance->time_in_at) {
+                    $timeInAt = Carbon::parse($attendance->time_in_at);
+                } else {
+                    $timeInAt = Carbon::createFromFormat('H:i:s', $attendance->time_in)->setDate($now->year, $now->month, $now->day);
+                }
+            } catch (\Exception $e) {
+                // Fallback: if parsing fails, assume a morning time so auto timeout may still apply
+                \Log::warning('Failed to parse time_in for attendance ' . $attendance->id . ': ' . $e->getMessage());
+                $timeInAt = $now->copy()->setTime(0, 0, 0);
+            }
+
+            // Only auto time out if current time is past 8 PM AND the user's time-in was at or before 8 PM
+            if ($now->isAfter($workEndTime) && $timeInAt->timestamp <= $workEndTime->timestamp) {
+                \Log::info('Auto timing out user ' . $user->id . ' at ' . $now->toDateTimeString() . ' (time_in at ' . $timeInAt->toDateTimeString() . ')');
                 $attendance->update([
                     'time_out' => $now->format('H:i:s'),
+                    'time_out_at' => $now,
                 ]);
             }
         }
