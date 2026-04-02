@@ -25,6 +25,7 @@ class User extends Authenticatable
         'trainee_name',
         'email',
         'password',
+        'role',
         'course_qualification',
         'agency_company',
         'on_site_supervisor',
@@ -84,5 +85,21 @@ class User extends Authenticatable
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class);
+    }
+
+    /**
+     * Check if user is an admin.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user is a trainee.
+     */
+    public function isTrainee(): bool
+    {
+        return $this->role === 'trainee';
     }
 }

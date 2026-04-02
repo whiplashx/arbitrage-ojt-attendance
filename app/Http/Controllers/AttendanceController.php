@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendance;
 use App\Models\FacialRecognition;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -382,11 +383,32 @@ class AttendanceController extends Controller
     /**
      * Get all attendance records for the authenticated user.
      */
-    public function getAllAttendance()
+    public function getAllAttendance(Request $request)
     {
         $user = Auth::user();
 
-        $attendances = Attendance::where('user_id', $user->id)
+        // Determine which user's attendance to fetch
+        $userId = $user->id;
+        
+        // If admin is requesting specific trainee, check header or query parameter
+        if ($user->isAdmin()) {
+            if ($request->hasHeader('X-Trainee-ID')) {
+                $traineeId = $request->header('X-Trainee-ID');
+                // Verify trainee exists and is a trainee role
+                $trainee = User::find($traineeId);
+                if ($trainee && $trainee->isTrainee()) {
+                    $userId = $traineeId;
+                }
+            } elseif ($request->has('trainee_id')) {
+                $traineeId = $request->input('trainee_id');
+                $trainee = User::find($traineeId);
+                if ($trainee && $trainee->isTrainee()) {
+                    $userId = $traineeId;
+                }
+            }
+        }
+
+        $attendances = Attendance::where('user_id', $userId)
             ->orderBy('attendance_date', 'desc')
             ->get()
             ->map(function ($attendance) {
@@ -410,7 +432,7 @@ class AttendanceController extends Controller
     /**
      * Get attendance records for a specific month.
      */
-    public function getAttendanceByMonth($month)
+    public function getAttendanceByMonth($month, Request $request)
     {
         $user = Auth::user();
 
@@ -422,7 +444,28 @@ class AttendanceController extends Controller
             ], 400);
         }
 
-        $attendances = Attendance::where('user_id', $user->id)
+        // Determine which user's attendance to fetch
+        $userId = $user->id;
+        
+        // If admin is requesting specific trainee, check header or query parameter
+        if ($user->isAdmin()) {
+            if ($request->hasHeader('X-Trainee-ID')) {
+                $traineeId = $request->header('X-Trainee-ID');
+                // Verify trainee exists and is a trainee role
+                $trainee = User::find($traineeId);
+                if ($trainee && $trainee->isTrainee()) {
+                    $userId = $traineeId;
+                }
+            } elseif ($request->has('trainee_id')) {
+                $traineeId = $request->input('trainee_id');
+                $trainee = User::find($traineeId);
+                if ($trainee && $trainee->isTrainee()) {
+                    $userId = $traineeId;
+                }
+            }
+        }
+
+        $attendances = Attendance::where('user_id', $userId)
             ->whereMonth('attendance_date', substr($month, 5, 2))
             ->whereYear('attendance_date', substr($month, 0, 4))
             ->orderBy('attendance_date', 'asc')

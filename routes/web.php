@@ -3,6 +3,7 @@
 use App\Http\Controllers\FacialRecognitionController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -13,33 +14,55 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
-Route::get('dashboard', function () {
-    $user = auth()->user();
-    $hasFacialEncoding = $user && $user->facialRecognition()->exists();
-    return Inertia::render('dashboard', [
-        'hasFacialEncoding' => $hasFacialEncoding,
-    ]);
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Conditional dashboard based on role
+    Route::get('dashboard', function () {
+        $user = auth()->user();
+        
+        // If user is admin, redirect to admin dashboard
+        if ($user->isAdmin()) {
+            return redirect()->route('admin.dashboard');
+        }
 
-Route::get('biometrics', function () {
-    $user = auth()->user();
-    $hasFacialEncoding = $user && $user->facialRecognition()->exists();
-    return Inertia::render('biometrics', [
-        'hasFacialEncoding' => $hasFacialEncoding,
-    ]);
-})->middleware(['auth', 'verified'])->name('biometrics');
+        // Otherwise show trainee dashboard
+        $hasFacialEncoding = $user && $user->facialRecognition()->exists();
+        return Inertia::render('dashboard', [
+            'hasFacialEncoding' => $hasFacialEncoding,
+        ]);
+    })->name('dashboard');
 
-Route::get('trainee-info', function () {
-    return Inertia::render('trainee-info');
-})->middleware(['auth', 'verified'])->name('trainee-info');
+    // Admin Dashboard and Routes
+    Route::prefix('admin')->middleware('admin')->group(function () {
+        Route::get('dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+        Route::get('dtr-management', function () {
+            return Inertia::render('admin/daily-time-record-management');
+        })->name('admin.dtr-management');
+        Route::get('api/trainees', [AdminController::class, 'getTrainees']);
+        Route::get('api/attendance-summary', [AdminController::class, 'getAttendanceSummary']);
+        Route::post('api/attendance-by-date', [AdminController::class, 'getAttendanceByDateRange']);
+        Route::get('api/trainee/{traineeId}', [AdminController::class, 'getTraineeDetails']);
+    });
 
-Route::get('attendance-records', function () {
-    return Inertia::render('attendance-records');
-})->middleware(['auth', 'verified'])->name('attendance-records');
+    Route::get('biometrics', function () {
+        $user = auth()->user();
+        $hasFacialEncoding = $user && $user->facialRecognition()->exists();
+        return Inertia::render('biometrics', [
+            'hasFacialEncoding' => $hasFacialEncoding,
+        ]);
+    })->name('biometrics');
 
-Route::get('daily-time-record', function () {
-    return Inertia::render('daily-time-record');
-})->middleware(['auth', 'verified'])->name('daily-time-record');
+    Route::get('trainee-info', function () {
+        return Inertia::render('trainee-info');
+    })->name('trainee-info');
+
+    Route::get('attendance-records', function () {
+        return Inertia::render('attendance-records');
+    })->name('attendance-records');
+
+    Route::get('daily-time-record', function () {
+        return Inertia::render('daily-time-record');
+    })->name('daily-time-record');
+});
 
 // Facial Recognition Routes
 Route::post('/api/facial-recognition/store', [FacialRecognitionController::class, 'storeFacialData'])->middleware('auth');

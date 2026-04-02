@@ -49,7 +49,7 @@ export default function DailyTimeRecord() {
         }
     };
 
-    const calculateHoursWorked = (timeIn: string, timeOut: string): string => {
+    const calculateHoursWorked = (timeIn: string, timeOut: string): number => {
         try {
             const parseTime = (timeStr: string): Date => {
                 const [hours, minutes, seconds] = timeStr.split(':').map(Number);
@@ -67,21 +67,35 @@ export default function DailyTimeRecord() {
             }
             
             const hours = diffMs / (1000 * 60 * 60);
-            const hoursStr = Math.floor(hours).toString();
-            const minutes_val = Math.floor((hours % 1) * 60).toString();
-            return `${hoursStr}:${minutes_val.padStart(2, '0')}:00 hrs.`;
+            return hours;
         } catch (error) {
-            return '';
+            return 0;
         }
+    };
+
+    const formatHours = (hours: number): string => {
+        const hoursStr = Math.floor(hours).toString();
+        const minutes_val = Math.floor((hours % 1) * 60).toString();
+        return `${hoursStr}:${minutes_val.padStart(2, '0')}:00 hrs.`;
+    };
+
+    const calculateOvertime = (timeIn: string, timeOut: string): string => {
+        const hours = calculateHoursWorked(timeIn, timeOut);
+        const NORMAL_SHIFT = 8;
+        
+        if (hours > NORMAL_SHIFT) {
+            const overtimeHours = hours - NORMAL_SHIFT;
+            return formatHours(overtimeHours);
+        }
+        return '';
     };
 
     const calculateTotalHours = (): number => {
         let total = 0;
         attendanceRecords.forEach(record => {
             if (record.time_in && record.time_out) {
-                const hoursStr = calculateHoursWorked(record.time_in, record.time_out);
-                const [hours, minutes] = hoursStr.split(':').map(Number);
-                total += hours + (minutes / 60);
+                const hours = calculateHoursWorked(record.time_in, record.time_out);
+                total += hours;
             }
         });
         return total;
@@ -110,9 +124,7 @@ export default function DailyTimeRecord() {
                     year: 'numeric'
                 });
 
-                const overtime = record.is_overtime 
-                    ? calculateHoursWorked(record.time_in, record.time_out)
-                    : '';
+                const overtime = calculateOvertime(record.time_in, record.time_out);
 
                 return [
                     dateStr,
@@ -251,8 +263,11 @@ export default function DailyTimeRecord() {
                                                 day: '2-digit',
                                                 year: 'numeric'
                                             });
-                                            const overtime = record.is_overtime 
-                                                ? calculateHoursWorked(record.time_in, record.time_out)
+                                            const hoursWorked = record.time_in && record.time_out 
+                                                ? formatHours(calculateHoursWorked(record.time_in, record.time_out))
+                                                : '';
+                                            const overtime = record.time_in && record.time_out 
+                                                ? calculateOvertime(record.time_in, record.time_out)
                                                 : '';
 
                                             return (
@@ -260,7 +275,7 @@ export default function DailyTimeRecord() {
                                                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-sm">{dateStr}</td>
                                                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-sm text-center">{record.time_in}</td>
                                                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-sm text-center">{record.time_out}</td>
-                                                    <td className="border border-gray-300 dark:border-gray-600 p-2 text-sm text-center">{overtime}</td>
+                                                    <td className="border border-gray-300 dark:border-gray-600 p-2 text-sm text-center">{overtime || 'N/A'}</td>
                                                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-sm">{record.daily_task || ''}</td>
                                                 </tr>
                                             );
