@@ -436,20 +436,22 @@ export default function AdminDTRManagement() {
 
                         return `
                             <div class="page">
-                                <div class="header">
-                                    <h1>DAILY TIME RECORD</h1>
-                                </div>
-                                
-                                <div class="trainee-info">
-                                    <div>
-                                        <p><strong>Name of Trainee:</strong> ${selectedTrainee.trainee_name || selectedTrainee.name}</p>
-                                        <p><strong>Course/Qualification:</strong> ${selectedTrainee.course_qualification || 'Not Set'}</p>
+                                ${pageIndex === 0 ? `
+                                    <div class="header">
+                                        <h1>DAILY TIME RECORD</h1>
                                     </div>
-                                    <div>
-                                        <p><strong>Agency/Company:</strong> ${selectedTrainee.agency_company || 'Not Set'}</p>
-                                        <p><strong>On-Site Supervisor:</strong> ${selectedTrainee.on_site_supervisor || 'Not Set'}</p>
+                                    
+                                    <div class="trainee-info">
+                                        <div>
+                                            <p><strong>Name of Trainee:</strong> ${selectedTrainee.trainee_name || selectedTrainee.name}</p>
+                                            <p><strong>Course/Qualification:</strong> ${selectedTrainee.course_qualification || 'Not Set'}</p>
+                                        </div>
+                                        <div>
+                                            <p><strong>Agency/Company:</strong> ${selectedTrainee.agency_company || 'Not Set'}</p>
+                                            <p><strong>On-Site Supervisor:</strong> ${selectedTrainee.on_site_supervisor || 'Not Set'}</p>
+                                        </div>
                                     </div>
-                                </div>
+                                ` : ''}
                                 
                                 ${totalPages > 1 ? `<div class="page-indicator">Page ${pageIndex + 1} of ${totalPages}</div>` : ''}
                                 
