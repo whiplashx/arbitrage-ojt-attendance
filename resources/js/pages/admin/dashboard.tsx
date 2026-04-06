@@ -1,11 +1,11 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, Link } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/layouts/admin-layout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import type { BreadcrumbItem } from '@/types';
-import { Users, Clock, CheckCircle, AlertCircle, BarChart3, TrendingUp } from 'lucide-react';
+import { Users, Clock, CheckCircle, AlertCircle, BarChart3, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PageProps {
     props: {
@@ -35,16 +35,23 @@ export default function AdminDashboard() {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [filteredTrainees, setFilteredTrainees] = useState<any[]>(props.trainees || []);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     useEffect(() => {
-        setFilteredTrainees(
-            props.trainees.filter(
-                (trainee: any) =>
-                    trainee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    trainee.email.toLowerCase().includes(searchTerm.toLowerCase())
-            )
+        const filtered = props.trainees.filter(
+            (trainee: any) =>
+                trainee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                trainee.email.toLowerCase().includes(searchTerm.toLowerCase())
         );
+        setFilteredTrainees(filtered);
+        setCurrentPage(1);
     }, [searchTerm, props.trainees]);
+
+    const totalPages = Math.ceil(filteredTrainees.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedTrainees = filteredTrainees.slice(startIndex, endIndex);
 
     const getProgressColor = (percentage: number) => {
         if (percentage >= 100) return 'bg-green-500';
@@ -158,7 +165,7 @@ export default function AdminDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredTrainees.map((trainee) => (
+                                        {paginatedTrainees.map((trainee) => (
                                             <tr key={trainee.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                                                 <td className="py-3 px-2 text-sm font-medium">{trainee.name}</td>
                                                 <td className="py-3 px-2 text-sm text-muted-foreground">{trainee.email}</td>
@@ -193,14 +200,55 @@ export default function AdminDashboard() {
                                                     )}
                                                 </td>
                                                 <td className="py-3 px-2">
-                                                    <Button variant="outline" size="sm">
-                                                        View Details
-                                                    </Button>
+                                                    <Link href={`/admin/dtr-management?trainee_id=${trainee.id}`}>
+                                                        <Button variant="outline" size="sm">
+                                                            View Details
+                                                        </Button>
+                                                    </Link>
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
+
+                                {filteredTrainees.length > 0 && (
+                                    <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                                        <p className="text-sm text-muted-foreground">
+                                            Showing {startIndex + 1} to {Math.min(endIndex, filteredTrainees.length)} of {filteredTrainees.length}
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                                disabled={currentPage === 1}
+                                            >
+                                                <ChevronLeft className="w-4 h-4" />
+                                            </Button>
+                                            <div className="flex items-center gap-1">
+                                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                                    <Button
+                                                        key={page}
+                                                        variant={currentPage === page ? 'default' : 'outline'}
+                                                        size="sm"
+                                                        onClick={() => setCurrentPage(page)}
+                                                        className="w-8"
+                                                    >
+                                                        {page}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                                disabled={currentPage === totalPages}
+                                            >
+                                                <ChevronRight className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

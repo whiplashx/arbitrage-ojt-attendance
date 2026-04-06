@@ -1,11 +1,11 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/layouts/admin-layout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import type { BreadcrumbItem } from '@/types';
-import { Download, Search, Loader, Printer } from 'lucide-react';
+import { Download, Search, Loader, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -50,11 +50,27 @@ export default function AdminDTRManagement() {
     );
     const [loadingRecords, setLoadingRecords] = useState(false);
     const [showAllRecords, setShowAllRecords] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     // Fetch all trainees on mount
     useEffect(() => {
         fetchTrainees();
     }, []);
+
+    // Check if trainee_id is in URL params and auto-select
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const traineeId = params.get('trainee_id');
+        if (traineeId && trainees.length > 0) {
+            const traineeToSelect = trainees.find(t => t.id === parseInt(traineeId));
+            if (traineeToSelect) {
+                setSelectedTrainee(traineeToSelect);
+                // Remove query param from URL for cleaner navigation
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+    }, [trainees]);
 
     // Fetch attendance records when trainee or month changes
     useEffect(() => {
@@ -113,7 +129,13 @@ export default function AdminDTRManagement() {
                 trainee.email.toLowerCase().includes(searchTerm.toLowerCase())
         );
         setFilteredTrainees(filtered);
+        setCurrentPage(1);
     }, [searchTerm, trainees]);
+
+    const totalPages = Math.ceil(filteredTrainees.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedTrainees = filteredTrainees.slice(startIndex, endIndex);
 
     const calculateHoursWorked = (timeIn: string, timeOut: string): number => {
         try {
@@ -511,13 +533,10 @@ export default function AdminDTRManagement() {
                             <p className="text-sm text-muted-foreground text-center py-8">No trainees found</p>
                         ) : (
                             <div className="space-y-2 overflow-y-auto flex-1">
-                                {filteredTrainees.map((trainee) => (
+                                {paginatedTrainees.map((trainee) => (
                                     <button
                                         key={trainee.id}
-                                        onClick={() => setSelectedTrainee(trainee)
-                                            
-                                        }
-                                        
+                                        onClick={() => setSelectedTrainee(trainee)}
                                         className={`w-full text-left p-3 rounded-lg border transition-colors ${
                                             selectedTrainee?.id === trainee.id
                                                 ? 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800'
@@ -528,6 +547,37 @@ export default function AdminDTRManagement() {
                                         <p className="text-xs text-muted-foreground">{trainee.email}</p>
                                     </button>
                                 ))}
+
+                                {filteredTrainees.length > 0 && (
+                                    <div className="mt-4 pt-4 border-t space-y-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                                disabled={currentPage === 1}
+                                                className="flex-1"
+                                            >
+                                                <ChevronLeft className="w-4 h-4" />
+                                            </Button>
+                                            <span className="text-xs text-muted-foreground text-center">
+                                                {currentPage} / {totalPages}
+                                            </span>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                                disabled={currentPage === totalPages}
+                                                className="flex-1"
+                                            >
+                                                <ChevronRight className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground text-center">
+                                            {startIndex + 1}-{Math.min(endIndex, filteredTrainees.length)} of {filteredTrainees.length}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </Card>
