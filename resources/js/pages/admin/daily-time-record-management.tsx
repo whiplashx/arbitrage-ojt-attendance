@@ -316,7 +316,7 @@ export default function AdminDTRManagement() {
                         }
                         
                         .header p {
-                            font-size: 15px;
+                            font-size: 12px;
                             margin-bottom: 0.1in;
                         }
                         
@@ -324,7 +324,7 @@ export default function AdminDTRManagement() {
                             display: grid;
                             grid-template-columns: 1fr 1fr;
                             gap: 0.3in;
-                            font-size: 15px;
+                            font-size: 12px;
                             margin-bottom: 0.3in;
                         }
                         
@@ -343,7 +343,7 @@ export default function AdminDTRManagement() {
                         }
                         
                         .page-indicator {
-                            font-size: 15px;
+                            font-size: 12px;
                             color: #666;
                             margin-bottom: 0.2in;
                         }
@@ -351,7 +351,7 @@ export default function AdminDTRManagement() {
                         table {
                             width: 100%;
                             border-collapse: collapse;
-                            font-size: 15px;
+                            font-size: 12px;
                             margin-bottom: 0.3in;
                         }
                         
@@ -397,7 +397,7 @@ export default function AdminDTRManagement() {
                             margin-top: 0.5in;
                             padding-top: 0.3in;
                             border-top: 1px solid #ccc;
-                            font-size: 15px;
+                            font-size: 12px;
                         }
                         
                         @media print {
