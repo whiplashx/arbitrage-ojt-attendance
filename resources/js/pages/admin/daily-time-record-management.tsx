@@ -492,7 +492,7 @@ export default function AdminDTRManagement() {
                             <div class="page">
                                 ${pageIndex === 0 ? `
                                     <div class="header">
-                                        <img src="/logo/ArbitrageInc.png" alt="Arbitrage Incorporated Logo" />
+                                        <img src="/logo/ArbitrageIncc.png" alt="Arbitrage Incorporated Logo" />
                                         <div class="header-content">
                                             <p>193 Heroes Bldg E. Beltran St.<br/>Bgy Katipunan<br/>Quezon City, Philippines<br/><br/>Email: info@arbitrage.com.ph</p>
                                         </div>

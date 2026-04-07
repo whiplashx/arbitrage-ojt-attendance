@@ -17,7 +17,7 @@ export default function AuthSimpleLayout({
                             className="flex flex-col items-center gap-2 font-medium"
                         >
                             <img
-                                src="/logo/ArbitrageInc.png"
+                                src="/logo/ArbitrageIncc.png"
                                 alt="Arbitrage"
                                 className="h-12 w-auto"
                             />

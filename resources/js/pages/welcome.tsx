@@ -93,7 +93,7 @@ export default function Welcome({
                         </div>
                         <div className="relative -mb-px flex w-full shrink-0 items-center justify-center overflow-hidden rounded-t-lg bg-white lg:mb-0 lg:-ml-px lg:w-[438px] lg:rounded-t-none lg:rounded-r-lg dark:bg-[#161615]">
                             <img
-                                src="/logo/ArbitrageInc.png"
+                                src="/logo/ArbitrageIncc.png"
                                 alt="Arbitrage Inc Logo"
                                 className="h-auto w-4/5 max-w-xs translate-y-0 opacity-100 transition-all duration-750 starting:translate-y-4 starting:opacity-0"
                             />
