@@ -302,11 +302,65 @@ export default function AdminDTRManagement() {
                             page-break-after: avoid;
                         }
                         
-                        .header {
-                            text-align: center;
-                            border-bottom: 2px solid black;
+                        .letterhead {
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 0.3in;
+                            border-bottom: 3px solid #0052cc;
                             padding-bottom: 0.3in;
-                            margin-bottom: 0.3in;
+                            margin-bottom: 0.4in;
+                        }
+                        
+                        .letterhead img {
+                            height: 0.8in;
+                            width: auto;
+                        }
+                        
+                        .letterhead-text {
+                            text-align: center;
+                        }
+                        
+                        .letterhead-text h2 {
+                            font-size: 18px;
+                            font-weight: bold;
+                            color: #0052cc;
+                            margin: 0;
+                        }
+                        
+                        .letterhead-text p {
+                            font-size: 11px;
+                            color: #666;
+                            margin: 2px 0 0 0;
+                        }
+                        
+                        .header {
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            gap: 0.5in;
+                            border-bottom: 2px solid black;
+                            padding-bottom: 0.2in;
+                            margin-bottom: 0.2in;
+                        }
+                        
+                        .header img {
+                            height: 1.2in;
+                            width: auto;
+                            flex-shrink: 0;
+                        }
+                        
+                        .header-content {
+                            font-size: 11px;
+                            line-height: 1.1;
+                            color: #333;
+                            text-align: right;
+                            flex-shrink: 0;
+                        }
+                        
+                        .header-content p {
+                            margin: 0;
+                            padding: 0;
                         }
                         
                         .header h1 {
@@ -325,7 +379,7 @@ export default function AdminDTRManagement() {
                             grid-template-columns: 1fr 1fr;
                             gap: 0.3in;
                             font-size: 12px;
-                            margin-bottom: 0.3in;
+                            margin-bottom: 0.2in;
                         }
                         
                         .trainee-info div {
@@ -352,7 +406,7 @@ export default function AdminDTRManagement() {
                             width: 100%;
                             border-collapse: collapse;
                             font-size: 12px;
-                            margin-bottom: 0.3in;
+                            margin-bottom: 0.2in;
                         }
                         
                         thead {
@@ -394,8 +448,8 @@ export default function AdminDTRManagement() {
                         }
                         
                         .footer {
-                            margin-top: 0.5in;
-                            padding-top: 0.3in;
+                            margin-top: 0.2in;
+                            padding-top: 0.2in;
                             border-top: 1px solid #ccc;
                             font-size: 12px;
                         }
@@ -438,7 +492,10 @@ export default function AdminDTRManagement() {
                             <div class="page">
                                 ${pageIndex === 0 ? `
                                     <div class="header">
-                                        <h1>DAILY TIME RECORD</h1>
+                                        <img src="/logo/ArbitrageInc.png" alt="Arbitrage Incorporated Logo" />
+                                        <div class="header-content">
+                                            <p>193 Heroes Bldg E. Beltran St.<br/>Bgy Katipunan<br/>Quezon City, Philippines<br/><br/>Email: info@arbitrage.com.ph</p>
+                                        </div>
                                     </div>
                                     
                                     <div class="trainee-info">
